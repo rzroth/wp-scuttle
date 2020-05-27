@@ -7,6 +7,7 @@ Version: 1.3.1
 Author URI: http://www.tnrglobal.com/plugins
 */
 /*
+RLR Add skip on suppress
 RLR Added proper handling for failures of any tag matchs
 RLR reworked for scuttle
 	http://digwp.com/2010/04/call-widget-with-shortcode/
@@ -233,6 +234,8 @@ DIV;
 	$bkLast = '';
 	foreach($feed as $f) {
 //		print_r($f); print "<br>\n";
+
+		if($f->sp == 'Y') continue;  //V1: skip on suppress
 
 //		$htitle = isset($f->n) ? 'title="'.$f->n.'"' : "";
 		$htitle = 'title="' . $f->bk . ":" . $f->u . '"';
