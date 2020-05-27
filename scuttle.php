@@ -1,12 +1,19 @@
 <?php
 /*
 Plugin Name: scuttle widget
-Description: Adds a sidebar widget or shortcode to display delicious links,   Shortcode is: [scuttle tags=".." [count=##] [name="..."] ]
+Description: Adds a sidebar widget or shortcode to display delicious links, Shortcode is: [scuttle tags=".." [count=##] [name="..."] ]
 Author: Rich Roth
 Version: 1.3.1
 Author URI: http://www.tnrglobal.com/plugins
 */
+
+$svr_file = dirname(__FILE__).'/scuttle-server.php';
+if(file_exists($svr_file)) {
+	require_once $svr_file;
+} 
+
 /*
+
 RLR Add skip on suppress
 RLR Added proper handling for failures of any tag matchs
 RLR reworked for scuttle
@@ -78,6 +85,9 @@ function widget_scuttle_control($widget_args = 1) {
 			$options[$widget_number] = array(
 				'title' => strip_tags(stripslashes(wp_specialchars($widget_scuttle_instance['title']))),
 				'username' => strip_tags(stripslashes(wp_specialchars($widget_scuttle_instance['username']))),
+				'refpage' => strip_tags(stripslashes(wp_specialchars($widget_scuttle_instance['refpage']))),
+				'scutserver' => strip_tags(stripslashes(wp_specialchars($widget_scuttle_instance['scutserver']))),
+
 				'count' => (int)$widget_scuttle_instance['count'],
 				'showtags' => $widget_scuttle_instance['showtags'] == 'y',
 				'favicon' => $widget_scuttle_instance['favicon'] == 'y',
@@ -95,6 +105,8 @@ function widget_scuttle_control($widget_args = 1) {
 		$count = 10;
 		$username = 'all';
 		$title = 'scuttle';
+		$refpage = '';
+		$scutserver = SCUT_SERVER;
 		$showtags = false;
 		$favicon = false;
 		$description = false;
@@ -105,6 +117,10 @@ function widget_scuttle_control($widget_args = 1) {
 		$count = attribute_escape($options[$number]['count']);
 		$username = attribute_escape($options[$number]['username']);
 		$title = attribute_escape($options[$number]['title']);
+
+		$refpage = attribute_escape($options[$number]['refpage']);
+		$scutserver = attribute_escape($options[$number]['scutserver']);
+
 		$showtags = $options[$number]['showtags'];
 		$favicon = $options[$number]['favicon'];
 		$description = $options[$number]['description'];
@@ -115,39 +131,47 @@ function widget_scuttle_control($widget_args = 1) {
 	// the widget are stored in one $_POST variable: $_POST['widget-many'][$number]
 	
 	?>
-		<p>
-			<label for="scuttle-title-<?php echo $number; ?>">
-				<?php _e('Widget title:', 'widgets'); ?>
-				<input type="text" class="widefat" id="scuttle-title-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][title]" value="<?php echo $title; ?>" />
-			</label><br />
-			<label for="scuttle-username-<?php echo $number; ?>">
-				<?php _e('scuttle login:', 'widgets'); ?>
-				<input type="text" class="widefat" id="scuttle-username-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][username]" value="<?php echo $username; ?>" />
-			</label><br />
-			<label for="scuttle-count-<?php echo $number; ?>">
-				<?php _e('Number of links:', 'widgets'); ?>
-				<input type="text" class="widefat" id="scuttle-count-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][count]" value="<?php echo $count; ?>" />
-			</label><br />
-			<label for="scuttle-tags-<?php echo $number; ?>">
-				<?php _e('Show only these tags (separated by spaces):', 'widgets'); ?>
-				<textarea id="scuttle-tags-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][tags]" class="widefat" cols="15", rows="2"><?php echo $tags; ?></textarea>
-			</label><br />
-		</p>
-		<p>
-			<label for="scuttle-description-<?php echo $number; ?>">
-				<input type="checkbox" class="checkbox" id="scuttle-description-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][description]" value="y" <?php if($description) { echo 'checked="checked"'; } ?> />
-				<?php _e('Show description', 'widgets'); ?>
-			</label><br />
-			<label for="scuttle-showtags-<?php echo $number; ?>">
-				<input type="checkbox" class="checkbox" id="scuttle-showtags-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][showtags]" value="y" <?php if($showtags) { echo 'checked="checked"'; } ?> />
-				<?php _e('Show tags', 'widgets'); ?>
-			</label><br />
-			<label for="scuttle-favicon-<?php echo $number; ?>">
-				<input type="checkbox" class="checkbox" id="scuttle-favicon-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][favicon]" value="y" <?php if($favicon) { echo 'checked="checked"'; } ?> />
-				<?php _e('Show favicon', 'widgets'); ?>
-			</label><br />
-			<input type="hidden" name="widget-scuttle[<?php echo $number; ?>][submit]" id="scuttle-submit-<?php echo $number; ?>" value="1" />
-		</p>
+	<p>
+		<label for="scuttle-title-<?php echo $number; ?>">
+			<?php _e('Widget title:', 'widgets'); ?>
+			<input type="text" class="widefat" id="scuttle-title-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][title]" value="<?php echo $title; ?>" />
+		</label><br />
+		<label for="scuttle-username-<?php echo $number; ?>">
+			<?php _e('scuttle login:', 'widgets'); ?>
+			<input type="text" class="widefat" id="scuttle-username-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][username]" value="<?php echo $username; ?>" />
+		</label><br />
+		<label for="scuttle-refpage-<?php echo $number; ?>">
+			<?php _e('Page to expand:', 'widgets'); ?>
+			<input type="text" class="widefat" id="scuttle-refpage-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][refpage]" value="<?php echo $refpage; ?>" />
+		</label><br />
+		<label for="scuttle-scutserver-<?php echo $number; ?>">
+			<?php _e('scuttle server:', 'widgets'); ?>
+			<input type="text" class="widefat" id="scuttle-scutserver-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][scutserver]" value="<?php echo $scutserver; ?>" />
+		</label><br />
+		<label for="scuttle-count-<?php echo $number; ?>">
+			<?php _e('Number of links:', 'widgets'); ?>
+			<input type="text" class="widefat" id="scuttle-count-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][count]" value="<?php echo $count; ?>" />
+		</label><br />
+		<label for="scuttle-tags-<?php echo $number; ?>">
+			<?php _e('Show only these tags (separated by spaces):', 'widgets'); ?>
+			<textarea id="scuttle-tags-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][tags]" class="widefat" cols="15", rows="2"><?php echo $tags; ?></textarea>
+		</label><br />
+	</p>
+	<p>
+		<label for="scuttle-description-<?php echo $number; ?>">
+			<input type="checkbox" class="checkbox" id="scuttle-description-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][description]" value="y" <?php if($description) { echo 'checked="checked"'; } ?> />
+			<?php _e('Show description', 'widgets'); ?>
+		</label><br />
+		<label for="scuttle-showtags-<?php echo $number; ?>">
+			<input type="checkbox" class="checkbox" id="scuttle-showtags-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][showtags]" value="y" <?php if($showtags) { echo 'checked="checked"'; } ?> />
+			<?php _e('Show tags', 'widgets'); ?>
+		</label><br />
+		<label for="scuttle-favicon-<?php echo $number; ?>">
+			<input type="checkbox" class="checkbox" id="scuttle-favicon-<?php echo $number; ?>" name="widget-scuttle[<?php echo $number; ?>][favicon]" value="y" <?php if($favicon) { echo 'checked="checked"'; } ?> />
+			<?php _e('Show favicon', 'widgets'); ?>
+		</label><br />
+		<input type="hidden" name="widget-scuttle[<?php echo $number; ?>][submit]" id="scuttle-submit-<?php echo $number; ?>" value="1" />
+	</p>
 	<?php
 }
 
@@ -177,6 +201,7 @@ function real_scuttle($options, $number, $args = Array(), $widget_args = Array()
 #		'title' => 'scuttle',);
 
 	$defaults = array('count' => 10, 'username' => 'all', 
+		'scutserver' => SCUT_SERVER,
 		// 'title' => 'scuttle',);
 	);
 
@@ -185,45 +210,69 @@ function real_scuttle($options, $number, $args = Array(), $widget_args = Array()
 			$options[$key] = $defaults[$key];
 		}
 	}
+//	print __LINE__ . ":options"; print_r($options);
 
 	$tags = false;
 	if($options['tags'] && ((count($options['tags']) > 1) || 
 				($options['tags'][0] != ''))) {
 		$tags = $options['tags'];
 	}
+	$refpage = $options['refpage'];
+	$preTitle = !empty($refpage) ? "<a href='$refpage'>" : "";
+	$afTitle  = !empty($refpage) ? "</a>" : "";
 
 //	$feedUrl = "http://feeds.delicious.com";
 //	$servUrl = "http://delicious.com";
 	
-	$feedUrl = "http://scut.thrivesmedia.com/api";
-	$servUrl = "http://scut.thrivesmedia.com/bookmarks.php";;
+//	$feedUrl = "http://scut.thrivesmedia.com/api";
+//	$servUrl = "http://scut.thrivesmedia.com/bookmarks.php";;
+
+	$scutserver = $options['scutserver'];
+	$feedUrl = $scutserver. "/api";
+	$servUrl = $scutserver. "/bookmarks.php";;
 	
 	$json_url = $feedUrl . '/v2/json/' . rawurlencode($options['username']);
-	$json_url.= $tags ? '/' . rawurlencode(implode('+', $tags)) : '';
+
+	if(isset($tags) && !empty($tags))
+		$json_url .= '/' . rawurlencode(implode('+', $tags));
+
+//	$json_url.= $tags ? '/' . rawurlencode(implode('+', $tags)) : '';
 
 	$json_url.= '/?count=' . ((int) $options['count']) ;
-//	$json_url.= "&sort=date_desc";
-	$json_url.= "&sort=set_desc";
+		//. '&callback=makeItDelicious';
+//	json_url.= "&sort=date_desc";
+	$json_url.= "&sort=set_desc";	
 	
 	echo $before_widget;
-	$refUrl = $servUrl . '/' . $options['username'];
-	if(!empty($tags)) $refUrl .= '/' . rawurlencode(implode('+', $tags));
+//	$uname = $options['username'];
 
+/*
+	$refUrl = $servUrl . '/' . $options['username'];
+//	print __LINE__ . ":Uname=($uname) tags=($tags)";
+	if(isset($tags) && !empty($tags))
+		$refUrl .= '/' . rawurlencode(implode('+', $tags));
+*/
 //	print "<a href='$json_url'>JSON</a>";
 	$ch = curl_init($json_url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	$json = curl_exec($ch);
+
 	if(!isset($json)) {
 		#print_r($json);        return "OK";
 		$feed = false;
 	} else {
 		$feed = json_decode($json);
 	}
-	echo $before_title . $options['title'] . $after_title;
+
+	print <<<TOP
+$before_title$preTitle{$options['title']}$afTitle$after_title
+TOP;
 
 	if(!$feed) {
 		error_log("Scuttle ERROR=$json_url<br>".print_r($json,true));
 		print __LINE__." Scuttle ERROR at URL $json_url<br>\n";
+		if(empty($tags)) 
+			print "Some Tags are required\n";
 		return 'Bad options';
 	}
 //	print "ERRORJSON="; print_r($feed); print "<br>\n";
@@ -242,7 +291,7 @@ DIV;
 
 		$out = "";
 		if($bkLast)
-		    $out = ($bkLast != $f->bk) ? "<hr style='1px' />" : "<br />";
+			$out = ($bkLast != $f->bk) ? "<hr style='1px' />" : "<br />";
 
 		print <<<HTML
 $out<a href="{$f->u}" class="scuttle-post" target=_blank $htitle>{$f->d}</a>
@@ -253,7 +302,9 @@ HTML;
 	echo $after_widget;
 
 /*
-	echo $before_title . "<a href='$refUrl' target=_blank>{$options['title']}</a>" . $after_title;
+	print <<<TOP
+$before_title<a href='$refUrl' target=_blank>{$options['title']}</a>$after_title
+TOP;
 	?>
 	<div id="scuttle-box-<?php echo $number; ?>" style="margin:0;padding:0;border:none;"> </div>
 	<script type="text/javascript">
@@ -372,7 +423,6 @@ function widget_scuttle_shortcode($atts) {
     extract(shortcode_atts(array(
         'username' => FALSE,
 	'tags' => FALSE,
-	'count' => 10,
     ), $atts, 'scuttle'));
 
     $atts['tags'] = Array($atts['tags']);
