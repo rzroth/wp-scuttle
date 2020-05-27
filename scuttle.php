@@ -3,11 +3,11 @@
 Plugin Name: scuttle widget
 Description: Adds a sidebar widget or shortcode to display delicious links,   Shortcode is: [scuttle tags=".." [count=##] [name="..."] ]
 Author: Rich Roth
-Version: 1.2.1
-Author URI: http://thrivespub.com
+Version: 1.3.1
+Author URI: http://www.tnrglobal.com/plugins
 */
 /*
-
+RLR Added proper handling for failures of any tag matchs
 RLR reworked for scuttle
 	http://digwp.com/2010/04/call-widget-with-shortcode/
 
@@ -199,26 +199,31 @@ function real_scuttle($options, $number, $args = Array(), $widget_args = Array()
 	
 	$json_url = $feedUrl . '/v2/json/' . rawurlencode($options['username']);
 	$json_url.= $tags ? '/' . rawurlencode(implode('+', $tags)) : '';
-	$json_url.= '/?count=' . ((int) $options['count'])  .
-		//. '&callback=makeItDelicious';
-		"&sort=set_desc";
+
+	$json_url.= '/?count=' . ((int) $options['count']) ;
+//	$json_url.= "&sort=date_desc";
+	$json_url.= "&sort=set_desc";
 	
 	echo $before_widget;
 	$refUrl = $servUrl . '/' . $options['username'];
-	if(isset($tags)) $refUrl .= '/' . rawurlencode(implode('+', $tags));
+	if(!empty($tags)) $refUrl .= '/' . rawurlencode(implode('+', $tags));
 
 //	print "<a href='$json_url'>JSON</a>";
 	$ch = curl_init($json_url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	$json = curl_exec($ch);
-	$feed = json_decode($json);
-
+	if(!isset($json)) {
+		#print_r($json);        return "OK";
+		$feed = false;
+	} else {
+		$feed = json_decode($json);
+	}
 	echo $before_title . $options['title'] . $after_title;
 
 	if(!$feed) {
 		error_log("Scuttle ERROR=$json_url<br>".print_r($json,true));
-		return __LINE__." Scuttle ERROR at URL $json_url<br>\n";
-//		exit;
+		print __LINE__." Scuttle ERROR at URL $json_url<br>\n";
+		return 'Bad options';
 	}
 //	print "ERRORJSON="; print_r($feed); print "<br>\n";
 	print <<<DIV
